@@ -1,0 +1,6 @@
+
+Frequent words of topic 0:model network function algorithm learning data set neural result parameter system number error distribution input problem vector point weight neuron
+Frequent words of topic 1:network learning input training function neural set unit algorithm error data weight model output system problem number result hidden vector
+Frequent words of topic 2:network model input learning neuron system neural function output set cell result data pattern visual signal algorithm unit weight information
+Frequent words of topic 3:network learning algorithm unit model neural function set input problem result number training method output data weight system point action
+Frequent words of topic 4:model data learning network function input set system neural parameter training point problem result number algorithm neuron method object error
