@@ -15,15 +15,22 @@ def preprocessor(datasetname,vocabname):
     voc: Vocabulary data
     T : the training data 
     '''
-    f = open(vocabname, "r")       
+    try:
+        f = open(vocabname, "r") 
+    except:
+        print("File cannot be opened: check your file path or file name",vocabname)
+        exit()
     voc = {}
     for line in f.readlines():
         words = line.split('\t')
         voc[int(words[0])] = words[1]
     f.close()
     W = len(voc)
-    
-    F = open(datasetname, "r")  
+    try:
+        F = open(datasetname, "r")  
+    except:
+        print("File cannot be opened: check your file path or file name",datasetname)
+        exit() 
     Lines = F.readlines()      
     Doc_label=[]
     Doc = []
