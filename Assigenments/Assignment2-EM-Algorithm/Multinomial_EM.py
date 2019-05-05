@@ -50,30 +50,11 @@ def preprocessor(datasetname,vocabname):
             T[i][int(Doc[i][j][0])] = int(Doc[i][j][1])
     
     return voc,T
-def loadData(libfilepath, vocfilepath):
-    print("Loading data......")
-    X = []
-    #Loading word file
-    wordDict = {}
-    vocfile = open(vocfilepath,"r")
-    for line in vocfile.readlines():
-        words = line.split('\t')
-        wordDict[int(words[0])] = words[1]
-    vocfile.close()
-    # Loading lib file
-    wordSize = len(wordDict)
-    libfile = open(libfilepath,"r")
-    for line in libfile.readlines():
-        doc = np.zeros(wordSize, dtype='float')
-        words = line.strip().split('\t')[1].split(" ")
-        for word in words:
-            word = word.split(":")
-            doc[int(word[0])] = int(word[1])
-        X.append(doc)
-    libfile.close()
-    return np.asarray(X), wordDict
 
 def fileWrite(arr,k,i):
+    '''
+    Writing the results to the txt files
+    '''
     filePath = "EMresult"+"_"+str(k)+".txt"
     with open(filePath,'a') as f:
         flag=False
@@ -114,7 +95,9 @@ def WordsMostFrequent(mu_log, wordDict,Num=20):
         
         print("")
       
-
+'''
+Two Normalization functions for EM
+'''
 def Normalize_array(array):
     sum_array = logsumexp(array)
     return array - np.array([sum_array])
@@ -129,105 +112,70 @@ def Normalize_matrix(matrix,axis):
 '''
 Below is the main part: EM 
 '''
-class EM:
+def initialize(topics_number):
     '''
-        word_matrix: word occurrence matrix for the corpus
+    Random initialization is better
     '''
-    def __init__(self,topics_number = 5,error = 1e-10,maxiteration=100):
-        self.topics_number = topics_number
-        self.pi = None
-        self.mu = None
-        self.er = error
-        self.maxiteration = maxiteration
+    pi = np.random.randint(1, 9, size=topics_number)
+    pi_log = np.log(pi) - np.log(pi.sum())
+    mu = np.random.randint(1, 9, size=(W, topics_number))
+    mu_log = np.log(mu) - np.log(mu.sum(axis=0))
+    return pi_log,mu_log
     
-    def cal_likehood(self):
-        '''
-        gamma_un_log: log of gamma (Not uniform)
-        And this matrix is D * K
-        '''
-        word_matrix = self.word_matrix
-        D,W = word_matrix.shape
-        pi_log = self.pi_log
-        mu_log = self.mu_log
-        gamma_un_log = np.dot(word_matrix,mu_log) + pi_log 
-        likehood = logsumexp(gamma_un_log,axis=1).sum()
-        return likehood
+
+def cal_likehood(pi_log,mu_log):
+    word_matrix = T
+    gamma_un_log = np.dot(word_matrix,mu_log) + pi_log 
+    likehood = logsumexp(gamma_un_log,axis=1).sum()
+    return likehood
+
+def Expectation(pi_log,mu_log):
+    word_matrix = T
+    gamma_un_log = np.dot(word_matrix,mu_log) + pi_log 
+    gamma_uniform_log = Normalize_matrix(gamma_un_log,axis=1)
+    return gamma_uniform_log # gamma_log
+
+def Maximization(gamma_log,topics_number):
+    word_matrix = T
+    mu_un_log = logsumexp(gamma_log.reshape(D,topics_number,1),
+                              b=word_matrix.reshape(D,1,W),axis = 0).transpose() 
+    mu_uniform_log = Normalize_matrix(mu_un_log,axis=0)
+        
+    pi_un_log = logsumexp(gamma_log,axis=0)
+    pi_uniform_log = Normalize_array(pi_un_log)
+    return pi_uniform_log,mu_uniform_log
+       
+def EMmain(T,error,Maxiteration,K):
+    topics_number = K
+    pi_log,mu_log=initialize(topics_number)
+    likehood_old = cal_likehood(pi_log,mu_log)
+    likehood_change = np.infty
+    iteration = 0
+    print("main")
+    print('Likehood Error Tolerance',error)
     
+    while likehood_change >= error or iteration >Maxiteration:
+        gamma_log=Expectation(pi_log,mu_log)
+        pi_log,mu_log = Maximization(gamma_log,topics_number)
+        likehood_new = cal_likehood(pi_log,mu_log)
+        likehood_change = likehood_new - likehood_old
+        likehood_old = likehood_new           
+        iteration +=1
+        print("training",iteration,likehood_change)       
     
-    def initialize(self):
-        word_matrix = self.word_matrix
-        topics_number = self.topics_number
-        W = word_matrix.shape[1]
-        '''
-        Using random initialization to get better results
-        '''
-        pi = np.random.randint(1, 9, size=topics_number)
-        pi_log = np.log(pi) - np.log(pi.sum())
-        mu = np.random.randint(1, 9, size=(W, topics_number))
-        mu_log = np.log(mu) - np.log(mu.sum(axis=0))
-  
-        self.pi_log = pi_log
-        self.mu_log = mu_log
-        
-    def Expectation(self):
-        '''
-        gamma_uniform_log: gamma_log which is uniform
-        '''
-        word_matrix = self.word_matrix
-        pi_log = self.pi_log
-        mu_log = self.mu_log
-        gamma_un_log = np.dot(word_matrix,mu_log) + pi_log 
-        gamma_uniform_log = Normalize_matrix(gamma_un_log,axis=1)
-        
-        self.gamma_log = gamma_uniform_log
-        
-    def Maximization(self):
-        word_matrix = self.word_matrix
-        gamma_log = self.gamma_log
-        topics_number = self.topics_number
-        D,W = word_matrix.shape[0],word_matrix.shape[1]
-        mu_un_log = logsumexp(gamma_log.reshape(D,topics_number,1),
-                              b=word_matrix.reshape(D,1,W),axis = 0).transpose() # !!!!
-        mu_uniform_log = Normalize_matrix(mu_un_log,axis=0)
-        
-        pi_un_log = logsumexp(gamma_log,axis=0)
-        pi_uniform_log = Normalize_array(pi_un_log)
-        
-        self.pi_log = pi_uniform_log
-        self.mu_log = mu_uniform_log
-    
-    def main(self,word_matrix):
-        self.word_matrix = word_matrix
-        self.initialize()
-        likehood_old =  self.cal_likehood()
-        likehood_change = np.infty
-        iteration = 0
-        print("main")
-        print('Likehood Error Tolerance',self.er)
-        mu_log = None
-        while likehood_change >= self.er or iteration >self.maxiteration:
-            self.Expectation()
-            self.Maximization()
-            mu_log = self.mu_log
-            likehood_new = self.cal_likehood()
-            likehood_change = likehood_new - likehood_old
-            likehood_old = likehood_new           
-            iteration +=1
-            print("training",iteration,likehood_change)       
-        
-        WordsMostFrequent(mu_log, voc)
-        print("Finished")
+    WordsMostFrequent(mu_log, voc)
+    print("Finished")
         
 filename1 = 'nips/nips.libsvm'
 filename2 = "nips/nips.vocab"
 voc,T = preprocessor(filename1,filename2)
+D,W = T.shape
 K_list = [5,10,20,30]
 error = 1e-10
 Maxiteration = 100
 for K in K_list:   
     time_start=time.time()
-    trainingmethod = EM(K,error,Maxiteration)
-    trainingmethod.main(T)
+    EMmain(T,error,Maxiteration,K)
     time_end=time.time()
     print('Totally Time Cost',time_end-time_start)
 
