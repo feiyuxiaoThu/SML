@@ -110,7 +110,3 @@ for percent in percents:
     
     reconstruct(data,V,datamean,indexs)
     #reconstruct_un(data,V,indexs)
-
-
-	
-
